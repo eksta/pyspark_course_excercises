@@ -1,8 +1,10 @@
 import pandas as pd
-from numpy import median
+from numpy import median as numpy_median
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
-def scoring_videos(views: pd.Series,
+
+@pandas_udf(DoubleType())
+def udfScoringVideos(views: pd.Series,
                    likes: pd.Series,
                    dislikes: pd.Series,
                    comment_likes: pd.Series,
@@ -15,8 +17,8 @@ def scoring_videos(views: pd.Series,
 
 
 @pandas_udf(DoubleType(),PandasUDFType.GROUPED_AGG)
-def mean(score: pd.Series) -> float:
-    return median(score)
+def udfMean(score: pd.Series) -> pd.Series:
+    return numpy_median(score)
 @pandas_udf(ArrayType(StringType()), functionType=PandasUDFType.SCALAR)
 def udfPandasSplit(tags: pd.Series) -> pd.Series:
     return tags.str.split('|')

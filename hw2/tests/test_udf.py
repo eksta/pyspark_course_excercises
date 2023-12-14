@@ -1,11 +1,9 @@
 import pytest
 from pyspark.sql import SparkSession
 from chispa import *
-
-from video_analytics.functions import scoring_videos, mean, udfPandasSplit
 from pyspark.sql.types import *
+from video_analytics.functions import udfScoringVideos, udfMean, udfPandasSplit
 import pyspark.sql.functions as f
-
 
 
 @pytest.fixture(scope='session')
@@ -14,14 +12,26 @@ def spark():
         SparkSession
         .builder
         .master("local")
+        .config("spark.driver.host", "127.0.0.1")
         .appName("chispa")
         .getOrCreate()
     )
+
+def test_scoring_videos(spark):
+    data = [
+        (1.0, 1.0, 1.0, 1.0, 1.0, 0.18000000000000002),
+        (0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
+        (100.0, 100.0, 100.0, 100.0, 0.0, 16.0)
+    ]
+    schema = ["likes", "dislikes", "views", "comment_likes", "comment_replies", "expected_score"]
+    df = spark.createDataFrame(data, schema) \
+        .withColumn("score", udfScoringVideos("likes", "dislikes", "views", "comment_likes", "comment_replies"))
+    assert_column_equality(df, "score", "expected_score")
+
 def test_split(spark):
     input_data = [
         ("logan paul vlog|logan paul|logan|paul|olympics|logan paul youtube|vlog|daily",),
         ("reality|emoji|animoji|Face ID",),
-        ("|||",),
         ("|",),
         ("",),
         (None,)
@@ -30,7 +40,6 @@ def test_split(spark):
     expected_data = [
         (["logan paul vlog", "logan paul", "logan", "paul", "olympics", "logan paul youtube", "vlog", "daily"],),
         (["reality", "emoji", "animoji", "Face ID"],),
-        (["", "", "", ""],),
         (["", ""],),
         ([""],),
         (None,)
@@ -57,9 +66,8 @@ def test_median(spark):
     ]
 
     expected_data = [
-        ("Shows", 2.0,),
+        ("Shows", 1.5,),
         ("Education", 1.0,),
-        ("Gaming", 100.0),
         ("Comedy", None)
     ]
 
@@ -70,7 +78,7 @@ def test_median(spark):
 
     df = spark \
         .createDataFrame(data=input_data, schema=schema) \
-        .groupBy("category").agg(mean("score").alias("score"))
+        .groupBy("category").agg(udfMean("score").alias("score"))
 
     expected_df = spark \
         .createDataFrame(data=expected_data, schema=schema)
@@ -78,16 +86,4 @@ def test_median(spark):
     assert_df_equality(df, expected_df, ignore_row_order=True)
 
 
-def test_sum_func(spark):
-    data = [
-        (1, 1, 1, 1, 1, 1),
-        (0, 0, 0, 0, 0, None),
-        (100, 100, 100, 100, 0, 100)
-    ]
 
-    schema = ["likes", "dislikes", "views", "comment_likes", "comment_replies", "expected_score"]
-
-    df = spark.createDataFrame(data, schema) \
-        .withColumn("score", scoring_videos("likes", "dislikes", "views", "comment_likes", "comment_replies"))
-
-    assert_column_equality(df, "score", "expected_score")

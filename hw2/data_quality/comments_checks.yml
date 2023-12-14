@@ -1,0 +1,5 @@
+checks for comments:
+  - row_count > 1
+  - missing_percent(comment_text) < 50%
+  - invalid_count(comment_text) = 0:
+      valid min length: 1

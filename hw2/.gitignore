@@ -2,4 +2,5 @@ notebooks/.ipynb_checkpoints
 notebooks/spark-warehouse
 .pytest_cache
 datasets
+../hw1/datasets
 .idea

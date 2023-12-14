@@ -8,7 +8,8 @@ def spark():
     return SparkSession.builder \
       .master("local") \
       .appName("chispa") \
-      .getOrCreate()
+      .config("spark.driver.host", "127.0.0.1") \
+    .getOrCreate()
 
 
 def build_scan(name, spark_session):
@@ -21,7 +22,7 @@ def build_scan(name, spark_session):
 
 
 def test_videos_source(spark):
-    videos_df = spark.read.option('header', 'true').option("inferSchema", "true").csv('datasets/USvideos.csv')
+    videos_df = spark.read.option('header', 'true').option("inferSchema", "true").csv('hw1/datasets/USvideos.csv')
     videos_df.createOrReplaceTempView('videos')
 
     scan = build_scan("videos_source_data_quality_test", spark)
@@ -29,4 +30,25 @@ def test_videos_source(spark):
 
     scan.execute()
 
+    scan.assert_no_checks_warn_or_fail()
+
+def test_comments_source(spark):
+    comments = spark.read.option('header', 'true').option("inferSchema", "true").csv('hw1/datasets/UScomments.csv')
+    comments.createOrReplaceTempView('comments')
+
+    scan = build_scan("comments_source_data_quality_test", spark)
+    scan.add_sodacl_yaml_file("data_quality/comments_checks.yml")
+
+    scan.execute()
+
+    scan.assert_no_checks_warn_or_fail()
+
+def test_comments_source2(spark):
+    comments = spark.read.option('header', 'true').option("inferSchema", "true").csv('hw1/datasets/UScomments.csv')
+    comments.createOrReplaceTempView('comments')
+
+    scan = build_scan("comments_source2_data_quality_test", spark)
+    scan.add_sodacl_yaml_file("data_quality/comments_checks2.yml")
+
+    scan.execute()
     scan.assert_no_checks_warn_or_fail()
